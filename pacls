@@ -1,14 +1,61 @@
 #!/bin/bash
-sterm=$1
-result=`pacman --color=always -Ss "$1" | sed 's/installed: /installed:/g'`
-preinfo=`echo "$result" | sed -n 1~2p | sed 's/\// /' | sed 's/([^)]*)//g' | sed -e 's/^[ ]*//' | sed 's/\x1B\[0m \x1B\[1;34m//g'`
+maxrepo=9
+maxname=42
+maxpkgver=14
+maxpkgrel=3
+maxpkgins=1
+ncols=`tput cols`
+maxdesc=$((ncols-$(($maxrepo+$maxname+$maxpkgver+$maxpkgrel+$maxpkgins+14))))
+repocolor='\x1B[1;35m'
+namecolor='\x1B[1m'
+pkgvercolor='\x1B[1;32m'
+pkginscolor='\x1B[1;34m'
+reset='\x1B[0m'
+
+# Perform Pacman search
+result=`pacman --color=never -Ss "$1" | sed 's/installed: /installed:/g'`
+preinfo=`echo "$result" | sed -n 1~2p | sed 's/\// /' | sed 's/([^)]*)//g'`
 IFS=$'\n' repos=( `echo "$preinfo" | awk '{print $1}';` )
 IFS=$'\n' names=( `echo "$preinfo" | awk '{print $2}';` )
-IFS=$'\n' pkgver=( `echo "$preinfo" | awk '{print $3}' | awk -F '-' '{$NF=""; print $0;}'` )
-IFS=$'\n' pkgrel=( `echo "$preinfo" | awk '{print $3}' | awk -F '-' '{print $NF;}'` )
-IFS=$'\n' pkgins=( `echo "$preinfo" | awk '{print $NF}' | sed 's/\[installed\]/*/' | sed 's/\[installed:.*\]/!/g' | sed '/\x1B\[1;32m[0-9].*/c\ '` )
-IFS=$'\n' descs=( `echo "$result" | sed -n 2~2p | sed -e 's/^[ ]*//' | GREP_COLORS="ms=01;39:mc=01;39:sl=:cx=:fn=35:ln=32:bn=32:se=36" grep -iE --color=always "$1|"` )
+IFS=$'\n' pkgvers=( `echo "$preinfo" | awk '{print $3}' | awk -F '-' '{$NF=""; print $0;}'` )
+IFS=$'\n' pkgrels=( `echo "$preinfo" | awk '{print $3}' | awk -F '-' '{print $NF;}'` )
+IFS=$'\n' pkgins=( `echo "$preinfo" | awk '{print $NF}' | sed "s/\[installed\]/${pkginscolor}*${reset}/g" | sed "s/\[installed:.*\]/${pkginscolor}!${reset}/g" | sed '/^[0-Z].*/c\ '` )
+IFS=$'\n' descs=( `echo "$result" | sed -n 2~2p | sed -e 's/^[ ]*//' | cut -c 1-${maxdesc} | GREP_COLORS="ms=01;39:mc=01;39:sl=:cx=:fn=35:ln=32:bn=32:se=36" grep -iE --color=always "$1|"` )
 
 for i in "${!names[@]}"; do
-    printf "%16s \e[0m| %-40s \e[0m| %-18s %-6s \e[0m| %1s | %s\n" "${repos[i]}" "${names[i]}" "${pkgver[i]}" "${pkgrel[i]}" "${pkgins[i]}" "${descs[i]}"
+    repo=${repos[i]}
+    name=${names[i]}
+    pkgver=${pkgvers[i]}
+    pkgrel=${pkgrels[i]}
+    pkgin=${pkgins[i]}
+    desc=${descs[i]}
+    [ ${#repo} -gt $maxrepo ] && repo=${repo:0:$maxrepo}
+    [ ${#name} -gt $maxname ] && name=${name:0:$maxname}
+    [ ${#pkgver} -gt $maxpkgver ] && pkgver=${pkgver:0:$maxpkgver}
+    [ ${#pkgrel} -gt $maxpkgrel ] && pkgrel=${pkgrel:0:$maxpkgrel}
+    printf "${repocolor}%${maxrepo}s${reset} | ${namecolor}%-${maxname}s${reset} | ${pkgvercolor}%-${maxpkgver}s %${maxpkgrel}s${reset} | %1s | %s\n" "$repo" "$name" "$pkgver" "$pkgrel" "${pkgin}" "${desc}"
+done
+
+# Perform AUR search
+result=`cower --color=never -s "$1" | sed 's/installed: /installed:/g'`
+preinfo=`echo "$result" | sed -n 1~2p | sed 's/\// /' | sed 's/([^)]*)//g' | sed -e 's/^[ ]*//'`
+IFS=$'\n' repos=( `echo "$preinfo" | awk '{print $1}';` )
+IFS=$'\n' names=( `echo "$preinfo" | awk '{print $2}';` )
+IFS=$'\n' pkgvers=( `echo "$preinfo" | awk '{print $3}' | awk -F '-' '{$NF=""; print $0;}'` )
+IFS=$'\n' pkgrels=( `echo "$preinfo" | awk '{print $3}' | awk -F '-' '{print $NF;}'` )
+IFS=$'\n' pkgins=( `echo "$preinfo" | awk '{print $NF}' | sed 's/<!>/ /g' | sed "s/\[installed\]/${pkginscolor}*${reset}/g" | sed "s/\[installed:.*\]/${pkginscolor}!${reset}/g" | sed '/^[0-Z].*/c\ '` )
+IFS=$'\n' descs=( `echo "$result" | sed -n 2~2p | sed -e 's/^[ ]*//' | cut -c 1-${maxdesc} | GREP_COLORS="ms=01;39:mc=01;39:sl=:cx=:fn=35:ln=32:bn=32:se=36" grep -iE --color=always "$1|"` )
+
+for i in "${!names[@]}"; do
+    repo=${repos[i]}
+    name=${names[i]}
+    pkgver=${pkgvers[i]}
+    pkgrel=${pkgrels[i]}
+    pkgin=${pkgins[i]}
+    desc=${descs[i]}
+    [ ${#repo} -gt $maxrepo ] && repo=${repo:0:$maxrepo}
+    [ ${#name} -gt $maxname ] && name=${name:0:$maxname}
+    [ ${#pkgver} -gt $maxpkgver ] && pkgver=${pkgver:0:$maxpkgver}
+    [ ${#pkgrel} -gt $maxpkgrel ] && pkgrel=${pkgrel:0:$maxpkgrel}
+    printf "${repocolor}%${maxrepo}s${reset} | ${namecolor}%-${maxname}s${reset} | ${pkgvercolor}%-${maxpkgver}s %${maxpkgrel}s${reset} | %1s | %s\n" "$repo" "$name" "$pkgver" "$pkgrel" "${pkgin}" "${desc}"
 done
