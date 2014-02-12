@@ -1,13 +1,13 @@
-pacsearch
+pacls
 =========
 
-A verbose and compact output wrapper for pacman
+A pacman parser with focus on robust search and easy readability.
 
 Usage:
-./pacsearch [package name or keyword]
+pacls [package name or keyword]
 
 Example:
-./pacsearch python
+pacls python
 
 Screenshot:
 ![Example output formatting](screenshot.png "Sample screenshot")
