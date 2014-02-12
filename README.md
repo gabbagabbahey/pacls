@@ -9,3 +9,5 @@ Usage:
 Example:
 ./pacsearch python
 
+Screenshot:
+![Example output formatting](screenshot.png "Sample screenshot")
